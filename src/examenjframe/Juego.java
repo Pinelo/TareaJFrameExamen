@@ -12,6 +12,10 @@ import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -48,6 +52,7 @@ public final class Juego extends JFrame implements Runnable, KeyListener{
     private SoundClip aucSonidoCaminador; //sonido de impacto con caminador
     private SoundClip aucSonidoCorredor;  //sonido de impacto con corredor
     private String nombreArchivo;         //nombre del archivo donde se guarda la info   
+    private Boolean bPausa;               //el juego esta pausado o no
 
     
      public Juego() {
@@ -60,7 +65,8 @@ public final class Juego extends JFrame implements Runnable, KeyListener{
         nombreArchivo = "datosJuego";
         // hago el applet de un tamaño 500,500
         setSize(800, 600);
-        
+        //el juego no esta pausado por defecto
+        bPausa = false;
         //por defecto score empieza en 0
         iScore =0;
         
@@ -187,6 +193,7 @@ public final class Juego extends JFrame implements Runnable, KeyListener{
                 System.out.println("Hubo un error en el juego " + 
                         iexError.toString());
             }
+            while(bPausa) {repaint();}
 	}
     }
     
@@ -261,9 +268,19 @@ public final class Juego extends JFrame implements Runnable, KeyListener{
         else if(e.getKeyCode() == KeyEvent.VK_D) {    
                 dirNena = 4;   // cambio la direccion para derecha
         }
+        else if(e.getKeyCode() == KeyEvent.VK_P) {
+            bPausa = !bPausa;
+        }
         else if(e.getKeyCode() == KeyEvent.VK_G) {
             try {
                 grabaArchivo();
+            } catch (IOException ex) {
+                Logger.getLogger(Juego.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        else if(e.getKeyCode() == KeyEvent.VK_C) {
+            try {
+                leeArchivo();
             } catch (IOException ex) {
                 Logger.getLogger(Juego.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -310,6 +327,9 @@ public final class Juego extends JFrame implements Runnable, KeyListener{
         g.setColor(Color.RED);
         g.drawString("Vidas: "+ iVidas, 20, 35);
         g.drawString("Score: " + iScore, 20, 50);
+        if(bPausa) {
+            g.drawString("PAUSA", getWidth()/2, 50);
+        }
         if (perNena != null && perCaminador != null && perCorredor != null && iVidas >0) {
                 //Dibuja la imagen de la nena en la posicion actualizada
                 g.drawImage(perNena.getImagen(), perNena.getX(),
@@ -337,6 +357,7 @@ public final class Juego extends JFrame implements Runnable, KeyListener{
                 PrintWriter fileOut = new PrintWriter(new FileWriter(nombreArchivo));
                     fileOut.println(iVidas);
                     fileOut.println(iScore);
+                    fileOut.println(iColisiones);
                     fileOut.println(perNena.getX());
                     fileOut.println(perNena.getY());
                     fileOut.println(encCaminadores.size());
@@ -344,14 +365,70 @@ public final class Juego extends JFrame implements Runnable, KeyListener{
                         Personaje Caminador = (Personaje)encCaminador;
                         fileOut.println(Caminador.getX());
                         fileOut.println(Caminador.getY());
+                        fileOut.println(Caminador.getVelocidad());
                     }
                     fileOut.println(encCorredores.size());
                     for (Object encCorredor : encCorredores) {
                         Personaje Corredor = (Personaje)encCorredor;
                         fileOut.println(Corredor.getX());
                         fileOut.println(Corredor.getY());
+                        fileOut.println(Corredor.getVelocidad());
                     }
                 fileOut.close();
+        }
+    
+     public void leeArchivo() throws IOException {
+                                                          
+                BufferedReader fileIn;
+                fileIn = new BufferedReader(new FileReader(nombreArchivo));
+                String dato = fileIn.readLine();
+                iVidas = Integer.valueOf(dato);
+                dato = fileIn.readLine();
+                iScore = Integer.valueOf(dato);
+                dato = fileIn.readLine();
+                iColisiones = Integer.valueOf(dato);
+                dato = fileIn.readLine();
+                perNena.setX(Integer.valueOf(dato));
+                dato = fileIn.readLine();
+                perNena.setY(Integer.valueOf(dato));
+                dato = fileIn.readLine();
+                int cantCaminadores = Integer.valueOf(dato);
+                //crea imagen para el nuevo arreglo de caminadores
+                URL urlImagenCaminador = this.getClass().getResource("alien1Camina.gif");
+                //borra el arreglo antiguo con caminadores para crear el nuevo 
+                encCaminadores.clear();
+                for(int i = cantCaminadores; i > 0; i--) {
+                    dato = fileIn.readLine();
+                        int posX = Integer.valueOf(dato);
+                        dato = fileIn.readLine();
+                        int posY = Integer.valueOf(dato);
+                        perCaminador = new Personaje(posX,posY,
+                                Toolkit.getDefaultToolkit().getImage(urlImagenCaminador));
+                        dato = fileIn.readLine();
+                        perCaminador.setVelocidad((Integer.valueOf(dato)));
+                        encCaminadores.add(perCaminador);
+                }
+                dato = fileIn.readLine();
+                int cantCorredores = Integer.valueOf(dato);
+                //crea imagen para el nuevo arreglo de corredors
+                URL urlImagenCorredor = this.getClass().getResource("alien2Corre.gif");
+                //borra el arreglo antiguo con corredores para crear el nuevo 
+                encCorredores.clear();
+                for(int i = cantCorredores; i > 0; i--) {
+                    dato = fileIn.readLine();
+                        int posX = Integer.valueOf(dato);
+                        dato = fileIn.readLine();
+                        int posY = Integer.valueOf(dato);
+                        perCorredor = new Personaje(posX,posY,
+                                Toolkit.getDefaultToolkit().getImage(urlImagenCorredor));
+                        dato = fileIn.readLine();
+                        perCorredor.setVelocidad((Integer.valueOf(dato)));
+                        encCorredores.add(perCorredor);
+                }
+                
+                
+                
+                fileIn.close();
         }
 
    
